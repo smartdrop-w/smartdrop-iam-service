@@ -47,6 +47,11 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByResetToken(String resetToken) {
+        return userJpaRepository.findByResetToken(resetToken).map(this::toDomainModel);
+    }
+
+    @Override
     public List<User> findAll() {
         return userJpaRepository.findAll()
                 .stream()
@@ -127,4 +132,3 @@ public class UserRepositoryAdapter implements UserRepository {
         );
     }
 }
-

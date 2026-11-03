@@ -5,14 +5,15 @@ import com.smart.drop.iam.domain.model.Role;
 import com.smart.drop.iam.domain.model.repositories.UserRepository;
 import com.smart.drop.iam.domain.model.repositories.RoleRepository;
 import com.smart.drop.iam.domain.exceptions.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.Random;
 
 /**
  * Servicio de aplicación para autenticación utilizando inyección de dependencias.
@@ -24,6 +25,8 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final SecureRandom secureRandom = new SecureRandom();
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository) {
         this.userRepository = userRepository;
@@ -35,8 +38,8 @@ public class AuthService {
      *
      * @param fullName nombre completo del usuario
      * @param email email del usuario
-     * @param passwordHash hash de la contraseña
-     * @return el usuario creado y persistido
+     * @param passwordHash hash o contraseña inicial del usuario
+     * @return el usuario creado y persistido con hash BCrypt
      */
     public User registerUser(String fullName, String email, String passwordHash) {
         // Valida que el email no esté registrado
@@ -44,8 +47,12 @@ public class AuthService {
             throw UserAlreadyExistsException.withEmail(email);
         }
 
+        String hashedPassword = (passwordHash.startsWith("$2a$") || passwordHash.startsWith("$2b$"))
+                ? passwordHash
+                : passwordEncoder.encode(passwordHash);
+
         // Crea la entidad de dominio
-        User user = User.create(fullName, email, passwordHash);
+        User user = User.create(fullName, email, hashedPassword);
 
         // Persiste y retorna
         return userRepository.save(user);
@@ -62,18 +69,30 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> UserNotFoundException.withEmail(email));
 
-        if (!user.getPasswordHash().equals(password)) {
+        boolean matches = (user.getPasswordHash().startsWith("$2a$") || user.getPasswordHash().startsWith("$2b$"))
+                ? passwordEncoder.matches(password, user.getPasswordHash())
+                : user.getPasswordHash().equals(password);
+
+        if (!matches) {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
+        // Actualización progresiva a BCrypt si la contraseña estaba en texto plano
+        boolean upgradedHash = false;
+        if (!user.getPasswordHash().startsWith("$2a$") && !user.getPasswordHash().startsWith("$2b$")) {
+            user.setPasswordHash(passwordEncoder.encode(password));
+            upgradedHash = true;
+        }
+
         if (Boolean.TRUE.equals(user.getIsTwoFactorEnabled())) {
-            String code = String.format("%06d", new Random().nextInt(999999));
+            String code = String.format("%06d", secureRandom.nextInt(1_000_000));
             user.setTwoFactorCode(code);
             userRepository.update(user);
-            System.out.println("\n=======================================================");
-            System.out.println("2FA CODE GENERATED FOR " + email + ": " + code);
-            System.out.println("=======================================================\n");
             throw new TwoFactorRequiredException(email, code);
+        }
+
+        if (upgradedHash) {
+            userRepository.update(user);
         }
 
         return user;
@@ -86,21 +105,14 @@ public class AuthService {
         String token = UUID.randomUUID().toString();
         user.setResetToken(token);
         userRepository.update(user);
-        
-        System.out.println("\n=======================================================");
-        System.out.println("PASSWORD RESET TOKEN FOR " + email + ": " + token);
-        System.out.println("=======================================================\n");
-        
         return token;
     }
 
     public void resetPassword(String token, String newPassword) {
-        User user = userRepository.findAll().stream()
-                .filter(u -> token.equals(u.getResetToken()))
-                .findFirst()
+        User user = userRepository.findByResetToken(token)
                 .orElseThrow(InvalidTokenException::new);
                 
-        user.setPasswordHash(newPassword);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setResetToken(null);
         userRepository.update(user);
     }
@@ -128,11 +140,15 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> UserNotFoundException.withEmail(email));
 
-        if (!user.getPasswordHash().equals(currentPassword)) {
+        boolean matches = (user.getPasswordHash().startsWith("$2a$") || user.getPasswordHash().startsWith("$2b$"))
+                ? passwordEncoder.matches(currentPassword, user.getPasswordHash())
+                : user.getPasswordHash().equals(currentPassword);
+
+        if (!matches) {
             throw new IllegalArgumentException("Current password is incorrect");
         }
 
-        user.setPasswordHash(newPassword);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.update(user);
     }
 
@@ -256,4 +272,3 @@ public class AuthService {
         return userRepository.count();
     }
 }
-

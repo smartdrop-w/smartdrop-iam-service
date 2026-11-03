@@ -35,6 +35,14 @@ public interface UserRepository {
     Optional<User> findByEmail(String email);
 
     /**
+     * Obtiene un usuario por su token de recuperación.
+     *
+     * @param resetToken el token de recuperación
+     * @return Optional con el usuario si existe
+     */
+    Optional<User> findByResetToken(String resetToken);
+
+    /**
      * Obtiene todos los usuarios.
      *
      * @return lista de todos los usuarios
@@ -64,4 +72,3 @@ public interface UserRepository {
      */
     long count();
 }
-

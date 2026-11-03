@@ -20,5 +20,12 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Integer> {
      * @return Optional con el usuario si existe
      */
     Optional<UserEntity> findByEmail(String email);
-}
 
+    /**
+     * Busca un usuario por token de recuperación.
+     *
+     * @param resetToken el token de recuperación
+     * @return Optional con el usuario si existe
+     */
+    Optional<UserEntity> findByResetToken(String resetToken);
+}
