@@ -1,9 +1,16 @@
 package com.smart.drop.iam.interfaces.rest;
 
 import com.smart.drop.iam.application.services.RoleService;
+import com.smart.drop.iam.domain.model.Role;
 import com.smart.drop.iam.interfaces.rest.dto.RoleRequestDto;
 import com.smart.drop.iam.interfaces.rest.dto.RoleResponseDto;
-import com.smart.drop.iam.domain.model.Role;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,9 +18,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controlador REST para gestión de roles.
- * Mapea requests HTTP a casos de uso del dominio.
+ * Controlador REST para gestión de roles del sistema de autorización (RBAC).
  */
+@Tag(name = "Role Management (RBAC)", description = "Administración del catálogo de roles y permisos del sistema")
 @RestController
 @RequestMapping({"/api/v1/iam/roles", "/api/v1/identity/roles"})
 public class RoleController {
@@ -24,27 +31,24 @@ public class RoleController {
         this.roleService = roleService;
     }
 
-    /**
-     * Crea un nuevo rol.
-     * POST /api/identity/roles
-     *
-     * @param request datos del rol a crear
-     * @return ResponseEntity con el rol creado
-     */
+    @Operation(summary = "Crear nuevo rol", description = "Registra un nuevo rol de autorización RBAC en el catálogo del sistema.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Rol creado exitosamente", content = @Content(schema = @Schema(implementation = RoleResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Nombre de rol inválido o duplicado"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
     @PostMapping
-    public ResponseEntity<RoleResponseDto> createRole(@RequestBody RoleRequestDto request) {
+    public ResponseEntity<RoleResponseDto> createRole(@Valid @RequestBody RoleRequestDto request) {
         Role role = roleService.createRole(request.name(), request.description());
         RoleResponseDto response = toRoleResponseDto(role);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Obtiene un rol por su ID.
-     * GET /api/identity/roles/{roleId}
-     *
-     * @param roleId el ID del rol
-     * @return ResponseEntity con el rol, o 404 si no existe
-     */
+    @Operation(summary = "Obtener rol por ID", description = "Recupera un rol a partir de su identificador numérico único.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Rol encontrado", content = @Content(schema = @Schema(implementation = RoleResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Rol no encontrado")
+    })
     @GetMapping("/{roleId}")
     public ResponseEntity<RoleResponseDto> getRole(@PathVariable Integer roleId) {
         return roleService.getRole(roleId)
@@ -52,13 +56,11 @@ public class RoleController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Obtiene un rol por su nombre.
-     * GET /api/identity/roles/by-name/{name}
-     *
-     * @param name el nombre del rol
-     * @return ResponseEntity con el rol, o 404 si no existe
-     */
+    @Operation(summary = "Buscar rol por nombre", description = "Recupera un rol utilizando su código canónico (ej: ROLE_ADMIN).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Rol encontrado", content = @Content(schema = @Schema(implementation = RoleResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Rol no encontrado")
+    })
     @GetMapping("/by-name/{name}")
     public ResponseEntity<RoleResponseDto> getRoleByName(@PathVariable String name) {
         return roleService.getRoleByName(name)
@@ -66,12 +68,10 @@ public class RoleController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Obtiene todos los roles.
-     * GET /api/identity/roles
-     *
-     * @return ResponseEntity con lista de todos los roles
-     */
+    @Operation(summary = "Listar todos los roles", description = "Retorna el catálogo completo de roles disponibles en la plataforma.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista de roles obtenida exitosamente")
+    })
     @GetMapping
     public ResponseEntity<List<RoleResponseDto>> getAllRoles() {
         List<RoleResponseDto> roles = roleService.getAllRoles()
@@ -81,52 +81,39 @@ public class RoleController {
         return ResponseEntity.ok(roles);
     }
 
-    /**
-     * Actualiza un rol existente.
-     * PUT /api/identity/roles/{roleId}
-     *
-     * @param roleId el ID del rol a actualizar
-     * @param request datos actualizados del rol
-     * @return ResponseEntity con el rol actualizado
-     */
+    @Operation(summary = "Actualizar rol existente", description = "Modifica los atributos y descripción de un rol RBAC.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Rol actualizado exitosamente", content = @Content(schema = @Schema(implementation = RoleResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Rol no encontrado")
+    })
     @PutMapping("/{roleId}")
-    public ResponseEntity<RoleResponseDto> updateRole(@PathVariable Integer roleId, @RequestBody RoleRequestDto request) {
+    public ResponseEntity<RoleResponseDto> updateRole(@PathVariable Integer roleId, @Valid @RequestBody RoleRequestDto request) {
         Role role = roleService.updateRole(roleId, request.name(), request.description());
         RoleResponseDto response = toRoleResponseDto(role);
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Elimina un rol por su ID.
-     * DELETE /api/identity/roles/{roleId}
-     *
-     * @param roleId el ID del rol a eliminar
-     * @return ResponseEntity sin contenido (204) si fue eliminado, o 404 si no existe
-     */
+    @Operation(summary = "Eliminar rol", description = "Elimina permanentemente un rol del catálogo si no posee dependencias activas.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Rol eliminado con éxito"),
+            @ApiResponse(responseCode = "404", description = "Rol no encontrado")
+    })
     @DeleteMapping("/{roleId}")
     public ResponseEntity<Void> deleteRole(@PathVariable Integer roleId) {
         boolean deleted = roleService.deleteRole(roleId);
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
-    /**
-     * Obtiene el número total de roles.
-     * GET /api/identity/roles/total-roles
-     *
-     * @return ResponseEntity con el total
-     */
+    @Operation(summary = "Total de roles registrados", description = "Retorna el contador total de roles en el sistema.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Cantidad total de roles")
+    })
     @GetMapping("/total-roles")
     public ResponseEntity<Long> getTotalRoles() {
         long totalRoles = roleService.getTotalRoles();
         return ResponseEntity.ok(totalRoles);
     }
 
-    /**
-     * Convierte una entidad de dominio Role a DTO de respuesta.
-     *
-     * @param role la entidad de dominio
-     * @return el DTO de respuesta
-     */
     private RoleResponseDto toRoleResponseDto(Role role) {
         return new RoleResponseDto(
                 role.getId(),
@@ -135,4 +122,3 @@ public class RoleController {
         );
     }
 }
-
