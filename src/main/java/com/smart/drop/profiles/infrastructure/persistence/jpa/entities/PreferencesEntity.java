@@ -1,5 +1,6 @@
 package com.smart.drop.profiles.infrastructure.persistence.jpa.entities;
 
+import com.smart.drop.shared.domain.model.entities.AuditableModel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Preferences")
-public class PreferencesEntity {
+public class PreferencesEntity extends AuditableModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,9 +34,6 @@ public class PreferencesEntity {
 
     @Column(name = "ThemeMode", length = 20)
     private String themeMode;
-
-    @Column(name = "UpdatedAt")
-    private LocalDateTime updatedAt;
 
     public Integer getPreferenceId() {
         return preferenceId;
@@ -75,14 +73,6 @@ public class PreferencesEntity {
 
     public void setThemeMode(String themeMode) {
         this.themeMode = themeMode;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }
 

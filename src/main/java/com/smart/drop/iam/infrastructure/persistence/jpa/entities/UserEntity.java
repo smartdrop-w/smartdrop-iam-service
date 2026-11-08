@@ -1,5 +1,6 @@
 package com.smart.drop.iam.infrastructure.persistence.jpa.entities;
 
+import com.smart.drop.shared.domain.model.entities.AuditableModel;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -7,11 +8,12 @@ import java.util.Set;
 
 /**
  * Entidad JPA que mapea a la tabla Users.
- * Utiliza anotaciones de persistencia para mapeo ORM.
+ * Utiliza anotaciones de persistencia para mapeo ORM y extiende AuditableModel
+ * para trazabilidad de creación y actualización desde el Shared Kernel.
  */
 @Entity
 @Table(name = "Users")
-public class UserEntity {
+public class UserEntity extends AuditableModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,9 +28,6 @@ public class UserEntity {
 
     @Column(name = "PasswordHash", nullable = false, length = 255)
     private String passwordHash;
-
-    @Column(name = "CreatedAt", nullable = true)
-    private LocalDateTime createdAt;
 
     @Column(name = "ResetToken", length = 100)
     private String resetToken;
@@ -55,7 +54,8 @@ public class UserEntity {
         this.fullName = fullName;
         this.email = email;
         this.passwordHash = passwordHash;
-        this.createdAt = LocalDateTime.now();
+        setCreatedAt(LocalDateTime.now());
+        setUpdatedAt(LocalDateTime.now());
     }
 
     // Getters y Setters
@@ -89,14 +89,6 @@ public class UserEntity {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
     }
 
     public String getResetToken() {

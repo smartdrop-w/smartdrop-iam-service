@@ -1,16 +1,18 @@
 package com.smart.drop.iam.infrastructure.persistence.jpa.entities;
 
+import com.smart.drop.shared.domain.model.entities.AuditableModel;
 import jakarta.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Entidad JPA que mapea a la tabla Roles.
- * Utiliza anotaciones de persistencia para mapeo ORM.
+ * Utiliza anotaciones de persistencia para mapeo ORM y extiende AuditableModel
+ * para trazabilidad de creación y actualización desde el Shared Kernel.
  */
 @Entity
 @Table(name = "Roles")
-public class RoleEntity {
+public class RoleEntity extends AuditableModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

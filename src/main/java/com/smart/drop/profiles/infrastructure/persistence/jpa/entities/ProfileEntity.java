@@ -1,5 +1,6 @@
 package com.smart.drop.profiles.infrastructure.persistence.jpa.entities;
 
+import com.smart.drop.shared.domain.model.entities.AuditableModel;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Profiles")
-public class ProfileEntity {
+public class ProfileEntity extends AuditableModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,12 +36,6 @@ public class ProfileEntity {
 
     @Column(name = "NotificationsEnabled")
     private Boolean notificationsEnabled;
-
-    @Column(name = "CreatedAt")
-    private LocalDateTime createdAt;
-
-    @Column(name = "UpdatedAt")
-    private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "profile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private PreferencesEntity preferences;
@@ -91,22 +86,6 @@ public class ProfileEntity {
 
     public void setNotificationsEnabled(Boolean notificationsEnabled) {
         this.notificationsEnabled = notificationsEnabled;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 
     public PreferencesEntity getPreferences() {
